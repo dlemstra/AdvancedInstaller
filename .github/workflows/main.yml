@@ -1,0 +1,48 @@
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - '!*'
+  pull_request:
+    branches:
+    - main
+
+name: main
+jobs:
+  sign_test:
+    name: 'Sign test'
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4    
+    
+    - name: Create msixbundle with Advanced Installer
+      env:
+        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        advancedinstaller_url: https://www.advancedinstaller.com/downloads/advinst-azts.msi
+      uses: caphyon/advinst-github-action@v1.1
+      with:
+        advinst-license: ${{ secrets.ADVINST_LICENSE_KEY }}
+        advinst-enable-automation: 'true'
+        aip-path: ImageMagick.Q16-HDRI.aip
+        aip-build-name: Build_MSIX
+        
+    - name: Sign binaries
+      uses: azure/trusted-signing-action@v0.3.16
+      with:
+        azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        endpoint: https://eus.codesigning.azure.net/
+        code-signing-account-name: ImageMagick
+        certificate-profile-name: ImageMagick
+        files-folder: 'x64'
+        files-folder-filter: dll,exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256           
+            
